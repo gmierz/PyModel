@@ -5,6 +5,7 @@ PyModel Graphics - generate graphics from pymodel FSM
 
 from pymodel import GraphicsOptions
 from pymodel.Dot import dotfile
+from pymodel.ProductModelProgram import import_support_class
 
 def main():
     (options, args) = GraphicsOptions.parse_args()
@@ -12,7 +13,10 @@ def main():
         GraphicsOptions.print_help()
         exit()
     else:
-        fsm = __import__(args[0])
+        try:
+            fsm = __import__(args[0])
+        except ModuleNotFoundError:
+            fsm = import_support_class(args[0])
         fbasename = options.output if options.output else args[0]
         fname = '%s.dot' % fbasename
         dotfile(fname, fsm, options.transitionLabels, options.noStateTooltip,

@@ -18,6 +18,10 @@ This module translates action function a to string aname: aname = a.__name__
 and translates aname string to action function a: a = getattr(module, aname)
 """
 
+import pathlib
+import inspect
+import importlib
+
 import pprint
 from operator import concat
 from collections import defaultdict
@@ -28,6 +32,26 @@ from pymodel.ModelProgram import ModelProgram
 from functools import reduce
 
 DEBUG = False
+
+def import_support_class(path):
+    """This function returns a Transformer class with the given path.
+
+    :param str path: The path points to the custom transformer.
+    :param bool ret_members: If true then return inspect.getmembers().
+    :return Transformer if not ret_members else inspect.getmembers().
+    """
+    file = pathlib.Path(path)
+
+    if not file.exists():
+        raise Exception(f"The support_class path {path} does not exist.")
+
+    # Importing a source file directly
+    spec = importlib.util.spec_from_file_location(name=file.name, location=path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    return module
+
    
 class ProductModelProgram(object):
  
@@ -44,7 +68,11 @@ class ProductModelProgram(object):
     #  so we find out what type to wrap each one in 
     #  by checking for one of each type's required attributes using hasattr
     for mname in args: # args is list of module name
-      self.module[mname] = __import__(mname) 
+      try:
+        self.module[mname] = __import__(mname)
+      except ModuleNotFoundError:
+        self.module[mname] = import_support_class(mname)
+
       if hasattr(self.module[mname], 'graph'):
         self.mp[mname] = FSM(self.module[mname],options.exclude,options.action)
       # for backwards compatibility we accept all of these test_suite variants
